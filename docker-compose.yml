@@ -1,0 +1,12 @@
+services:
+  medical-clinic-proxy:
+    build: .
+    container_name: 'medical-clinic-proxy'
+    ports:
+      - '8081:8080'
+    networks:
+      - medicalclinic-network
+
+networks:
+  medicalclinic-network:
+    external: true

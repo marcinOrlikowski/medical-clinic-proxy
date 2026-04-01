@@ -1,0 +1,9 @@
+package com.marcinorlikowski.medicalclinicproxy.dto;
+
+import java.util.List;
+
+public record PageDto<T>(
+        List<T> content,
+        PageMetadata metaData
+) {
+}
