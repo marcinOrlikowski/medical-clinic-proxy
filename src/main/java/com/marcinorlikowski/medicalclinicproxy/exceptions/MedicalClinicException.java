@@ -9,5 +9,4 @@ import org.springframework.http.HttpStatus;
 public class MedicalClinicException extends RuntimeException {
     private String message;
     private HttpStatus status;
-
 }

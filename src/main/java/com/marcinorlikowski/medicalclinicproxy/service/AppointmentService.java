@@ -1,18 +1,13 @@
 package com.marcinorlikowski.medicalclinicproxy.service;
 
 import com.marcinorlikowski.medicalclinicproxy.client.AppointmentClient;
-import com.marcinorlikowski.medicalclinicproxy.dto.AppointmentDto;
-import com.marcinorlikowski.medicalclinicproxy.dto.AppointmentResponse;
-import com.marcinorlikowski.medicalclinicproxy.dto.AssignPatientToAppointmentCommand;
-import com.marcinorlikowski.medicalclinicproxy.dto.PageDto;
+import com.marcinorlikowski.medicalclinicproxy.dto.*;
 import com.marcinorlikowski.medicalclinicproxy.mapper.AppointmentMapper;
-import com.marcinorlikowski.medicalclinicproxy.model.Specialization;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @Slf4j
@@ -22,6 +17,18 @@ public class AppointmentService {
     private final AppointmentClient appointmentClient;
     private final AppointmentMapper mapper;
 
+    public PageDto<AppointmentDto> getByFilters(
+            Pageable pageable,
+            AppointmentFilter filter
+    ) {
+        PageDto<AppointmentResponse> appointments = appointmentClient.getByFilters(
+                pageable,
+                filter
+        );
+        List<AppointmentDto> appointmentsDto = mapper.toDto(appointments.content());
+        return new PageDto<>(appointmentsDto, appointments.metaData());
+    }
+
     public AppointmentDto assignPatient(AssignPatientToAppointmentCommand command) {
         log.info("Assigning patient to appointment. appointmentId '{}', patientId '{}'",
                 command.appointmentId(), command.patientId());
@@ -30,16 +37,9 @@ public class AppointmentService {
         return mapper.toDto(appointment);
     }
 
-    public PageDto<AppointmentDto> getAvailableBySpecializationAndDate(
-            Pageable pageable,
-            Specialization specialization,
-            LocalDate date
-    ) {
-        log.info("Getting available appointments for specialization: '{}', date: '{}'", specialization, date);
-        PageDto<AppointmentResponse> page = appointmentClient.getAvailableBySpecializationAndDate(pageable,
-                specialization, date);
-        List<AppointmentDto> appointmentsDto = mapper.toDto(page.content());
-        log.info("Returning available appointments for specialization: '{}', date: '{}'", specialization, date);
-        return new PageDto<>(appointmentsDto, page.metaData());
+    public void deleteAppointment(Long appointmentId) {
+        log.info("Deleting appointment with appointmentId: '{}'", appointmentId);
+        appointmentClient.deleteAppointment(appointmentId);
+        log.info("Appointment with appointmentId: '{}' successfully removed", appointmentId);
     }
 }

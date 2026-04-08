@@ -1,16 +1,13 @@
 package com.marcinorlikowski.medicalclinicproxy.client;
 
+import com.marcinorlikowski.medicalclinicproxy.dto.AppointmentFilter;
 import com.marcinorlikowski.medicalclinicproxy.dto.AppointmentResponse;
 import com.marcinorlikowski.medicalclinicproxy.dto.AssignPatientToAppointmentCommand;
 import com.marcinorlikowski.medicalclinicproxy.dto.PageDto;
-import com.marcinorlikowski.medicalclinicproxy.model.Specialization;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.cloud.openfeign.SpringQueryMap;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDate;
 
 @FeignClient(
         value = "appointment-client",
@@ -19,15 +16,17 @@ import java.time.LocalDate;
 )
 public interface AppointmentClient {
 
-    @GetMapping(value = "/appointments/available")
-    PageDto<AppointmentResponse> getAvailableBySpecializationAndDate(
-            @PageableDefault(size = 20, sort = "id") Pageable pageable,
-            @RequestParam Specialization specialization,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    @GetMapping(value = "/appointments")
+    PageDto<AppointmentResponse> getByFilters(
+            Pageable pageable,
+            @SpringQueryMap AppointmentFilter filter
     );
 
-    @PatchMapping(value = "/appointments/book")
+    @PatchMapping(value = "/appointments")
     AppointmentResponse assignPatient(
             @RequestBody AssignPatientToAppointmentCommand command
     );
+
+    @DeleteMapping(value = "/appointments")
+    void deleteAppointment(@RequestParam Long appointmentId);
 }

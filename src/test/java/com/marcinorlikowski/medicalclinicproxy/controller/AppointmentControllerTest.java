@@ -1,11 +1,7 @@
 package com.marcinorlikowski.medicalclinicproxy.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.marcinorlikowski.medicalclinicproxy.dto.AppointmentDto;
-import com.marcinorlikowski.medicalclinicproxy.dto.AssignPatientToAppointmentCommand;
-import com.marcinorlikowski.medicalclinicproxy.dto.PageDto;
-import com.marcinorlikowski.medicalclinicproxy.dto.PageMetadata;
-import com.marcinorlikowski.medicalclinicproxy.model.Specialization;
+import com.marcinorlikowski.medicalclinicproxy.dto.*;
 import com.marcinorlikowski.medicalclinicproxy.service.AppointmentService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,16 +11,13 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -39,20 +32,23 @@ class AppointmentControllerTest {
     private AppointmentService appointmentService;
 
     @Test
-    void getAvailableBySpecializationAndDate_ShouldReturnStatusOkAndPageDto_WhenDataCorrect() throws Exception {
+    void getByFilters_ShouldReturnStatusOkAndPageDto_WhenDataCorrect() throws Exception {
         // given
-        Specialization spec = Specialization.CARDIOLOGIST;
-        LocalDate date = LocalDate.of(2026, 3, 30);
-        PageDto<AppointmentDto> emptyPage = new PageDto<>(List.of(), new PageMetadata(0, 20, 0, 0));
-
-        when(appointmentService.getAvailableBySpecializationAndDate(any(), eq(spec), eq(date)))
-                .thenReturn(emptyPage);
+        AppointmentDto appointmentDto = new AppointmentDto(1L, LocalDateTime.now(), LocalDateTime.now(),
+                1L, null);
+        PageDto<AppointmentDto> pageDto = new PageDto<>(
+                List.of(appointmentDto),
+                new PageMetadata(0, 20, 1, 1)
+        );
+        when(appointmentService.getByFilters(any(), any()))
+                .thenReturn(pageDto);
         // when & then
-        mockMvc.perform(get("/appointments/available")
-                        .param("specialization", spec.name())
-                        .param("date", date.toString()))
+        mockMvc.perform(get("/appointments")
+                        .param("doctorId", "1")
+                        .param("isAvailable", "true"))
+                .andDo(print())
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content").isEmpty());
+                .andExpect(jsonPath("$.content[0].doctorId").value(1L));
     }
 
     @Test
@@ -65,7 +61,7 @@ class AppointmentControllerTest {
                 LocalDateTime.now(), 1L, patientId);
         when(appointmentService.assignPatient(command)).thenReturn(assignedDto);
         // when & then
-        mockMvc.perform(patch("/appointments/book", appointmentId)
+        mockMvc.perform(patch("/appointments")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(command)))
                 .andExpect(status().isOk())
@@ -74,25 +70,28 @@ class AppointmentControllerTest {
     }
 
     @Test
-    void getAvailableBySpecializationAndDate_ShouldReturnBadRequest_WhenSpecializationInvalid() throws Exception {
-        // given
-        String spec = "CHEF";
-        LocalDate date = LocalDate.of(2026, 3, 30);
-        // when & then
-        mockMvc.perform(get("/appointments/available")
-                        .param("specialization", spec)
-                        .param("date", date.toString()))
+    void assignPatient_shouldReturnBadRequest_WhenBodyIncorrect() throws Exception {
+        // given & when & then
+        mockMvc.perform(patch("/appointments")
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest());
-        verifyNoInteractions(appointmentService);
     }
 
     @Test
-    void getAvailableBySpecializationAndDate_ShouldReturnBadRequest_WhenDateInvalid() throws Exception {
+    void deleteAppointment_ShouldReturnNoContent_WhenDataCorrect() throws Exception {
         // given
-        Specialization spec = Specialization.CARDIOLOGIST;
+        Long appointmentId = 1L;
         // when & then
-        mockMvc.perform(get("/appointments/available")
-                        .param("specialization", spec.name()))
+        mockMvc.perform(delete("/appointments")
+                        .param("appointmentId", "1"))
+                .andExpect(status().isNoContent());
+        verify(appointmentService).deleteAppointment(appointmentId);
+    }
+
+    @Test
+    void deleteAppointment_ShouldReturnBadRequest_WhenParamMissing() throws Exception {
+        // given & when & then
+        mockMvc.perform(delete("/appointments"))
                 .andExpect(status().isBadRequest());
         verifyNoInteractions(appointmentService);
     }
